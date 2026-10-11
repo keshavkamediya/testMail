@@ -100,3 +100,38 @@ curl -X POST http://localhost:3000/api/test/echo \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello World"}'
 ```
+
+---
+
+## 🚀 CI/CD & VPS Deployment
+
+The repository includes a GitHub Actions workflow in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) and a PM2 process file in [`ecosystem.config.js`](ecosystem.config.js).
+
+### Pipeline Workflow
+1. **CI Phase:** Runs on all pull requests and pushes to `main`. Executes `npm ci` and `npm test` across Node.js matrix versions.
+2. **CD Phase:** Triggers on successful push to `main`. Securely SSHs into your VPS, pulls changes, installs production dependencies, and performs zero-downtime reloads using PM2.
+
+### Required GitHub Repository Secrets
+Navigate to **Settings > Secrets and variables > Actions** in GitHub and add:
+
+| Secret Name | Description | Example |
+|---|---|---|
+| `VPS_HOST` | VPS public IP or hostname | `123.45.67.89` |
+| `VPS_USERNAME` | SSH username | `ubuntu` or `root` |
+| `VPS_SSH_KEY` | Private SSH key (`id_ed25519` or `id_rsa`) | `-----BEGIN OPENSSH PRIVATE KEY...` |
+| `VPS_PORT` *(Optional)* | SSH port (defaults to 22) | `22` |
+| `VPS_TARGET_DIR` *(Optional)* | Deployment destination folder | `/var/www/phone_mail` |
+
+### One-Time VPS Initial Preparation
+Run the following on your VPS:
+```bash
+# 1. Install Node.js & PM2
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo npm install -g pm2
+
+# 2. Add your public SSH key to ~/.ssh/authorized_keys
+# 3. Enable PM2 startup on system boot
+pm2 startup
+```
+

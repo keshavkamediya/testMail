@@ -1,0 +1,100 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ==========================================
+  # 1. Continuous Integration (Test & Verify)
+  # ==========================================
+  ci:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Test Suite
+        run: npm test
+
+  # ==========================================
+  # 2. Continuous Deployment to VPS
+  # ==========================================
+  deploy:
+    name: Deploy to VPS
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+
+            DEPLOY_PATH="${{ secrets.VPS_TARGET_DIR || '/var/www/phone_mail' }}"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+
+            echo "🚀 Deploying application to: $DEPLOY_PATH"
+
+            # Create target directory if it does not exist
+            if [ ! -d "$DEPLOY_PATH" ]; then
+              echo "Directory does not exist. Creating and cloning repository..."
+              sudo mkdir -p "$DEPLOY_PATH"
+              sudo chown -R $USER:$USER "$DEPLOY_PATH"
+              git clone "$REPO_URL" "$DEPLOY_PATH"
+              cd "$DEPLOY_PATH"
+            else
+              echo "Directory exists. Pulling latest changes..."
+              cd "$DEPLOY_PATH"
+              git fetch origin main
+              git reset --hard origin/main
+            fi
+
+            # Install dependencies
+            echo "📦 Installing production dependencies..."
+            npm install --omit=dev
+
+            # Ensure PM2 is installed globally on the VPS
+            if ! command -v pm2 &> /dev/null; then
+              echo "Installing PM2 globally..."
+              sudo npm install -g pm2
+            fi
+
+            # Reload or start application with PM2
+            echo "🔄 Starting / reloading application via PM2..."
+            if pm2 describe phonemail > /dev/null 2>&1; then
+              pm2 reload ecosystem.config.js --env production --update-env || pm2 reload phonemail --update-env
+            else
+              pm2 start ecosystem.config.js --env production || pm2 start server.js --name phonemail --time
+            fi
+
+            # Save PM2 process list so it survives VPS reboots
+            pm2 save
+
+            echo "✅ Deployment completed successfully!"
