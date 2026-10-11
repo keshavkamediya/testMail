@@ -1,0 +1,87 @@
+### 1. Root / Directory
+GET http://localhost:3000/
+
+### 2. Health Check
+GET http://localhost:3000/api/health
+
+### 3. Validate Phone Number
+POST http://localhost:3000/api/phone/validate
+Content-Type: application/json
+
+{
+  "phone": "+12025550143"
+}
+
+### 4. Send Phone OTP
+POST http://localhost:3000/api/phone/send-otp
+Content-Type: application/json
+
+{
+  "phone": "+12025550143"
+}
+
+### 5. Check Active OTPs
+GET http://localhost:3000/api/phone/active-otps
+
+### 6. Verify Phone OTP
+POST http://localhost:3000/api/phone/verify-otp
+Content-Type: application/json
+
+{
+  "phone": "+12025550143",
+  "otp": "123456"
+}
+
+### 7. Validate Email
+POST http://localhost:3000/api/email/validate
+Content-Type: application/json
+
+{
+  "email": "tester@example.com"
+}
+
+### 8. Send Email Verification Link
+POST http://localhost:3000/api/email/send-verification
+Content-Type: application/json
+
+{
+  "email": "tester@example.com"
+}
+
+### 9. Send Custom Email Message
+POST http://localhost:3000/api/email/send-message
+Content-Type: application/json
+
+{
+  "to": "tester@example.com",
+  "subject": "Testing Email Route",
+  "body": "Hello, this is a test message from Express!"
+}
+
+### 10. List Users
+GET http://localhost:3000/api/users
+
+### 11. Create User
+POST http://localhost:3000/api/users
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "phone": "+12025550177"
+}
+
+### 12. Echo Test
+POST http://localhost:3000/api/test/echo
+Content-Type: application/json
+
+{
+  "testing": true,
+  "foo": "bar"
+}
+
+### 13. Delayed Response (Timeout Test)
+GET http://localhost:3000/api/test/delay/1000
+
+### 14. Custom HTTP Status Code
+GET http://localhost:3000/api/test/status/401
